@@ -1,0 +1,468 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+--[[
+    SG SPAMMER | SYSTEM CORE UI
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- ==================== CONFIG ====================
+local RP_NAME = "SG SPAMMER"
+local RP_BIO  = "SG DEVELOPEMENTS😮‍💨"
+local BASE_PREFIX = "//==////==////==//" -- 3x //==//
+
+-- ==================== REMOTES ====================
+local function getRemotes()
+    local success, RE = pcall(function()
+        return ReplicatedStorage:WaitForChild("RE", 10)
+    end)
+    if not success or not RE then return nil, nil end
+
+    local nameRemote = RE:FindFirstChild("1RPNam1eTex1t")
+    local colorRemote = RE:FindFirstChild("1RPNam1eColo1r")
+    return nameRemote, colorRemote
+end
+
+local NameRemote, ColorRemote = getRemotes()
+
+task.spawn(function()
+    if NameRemote then
+        for i = 1, 5 do
+            pcall(function()
+                NameRemote:FireServer("RolePlayName", RP_NAME)
+                NameRemote:FireServer("RolePlayBio", RP_BIO)
+            end)
+            task.wait(0.4)
+        end
+    end
+end)
+
+task.spawn(function()
+    if not ColorRemote then return end
+    local hue = 0
+    while true do
+        local color = Color3.fromHSV(hue, 1, 1)
+        pcall(function()
+            ColorRemote:FireServer("PickingRPNameColor", color)
+            ColorRemote:FireServer("PickingRPBioColor", color)
+        end)
+        hue = (hue + 0.015) % 1
+        task.wait(0.35)
+    end
+end)
+
+-- ==================== CHAT FUNCTION ====================
+local function sendChat(msg)
+    local success = pcall(function()
+        local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+        if channel then
+            channel:SendAsync(msg)
+            return true
+        end
+    end)
+    if success then return end
+
+    pcall(function()
+        local chatEvents = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+        if chatEvents then
+            local say = chatEvents:FindFirstChild("SayMessageRequest")
+            if say then
+                say:FireServer(msg, "All")
+            end
+        end
+    end)
+end
+
+-- ==================== AUTO TMKX WORDS & PHRASES ====================
+local baseList = {
+    "TMKX МЕН VOID SPELL FUN FACT VOID FRAUD GODZILLA HYPER GODLY BEAM",
+    "TMKX MEH NOVA POWER FRAUD FUN FACT GODZILLA WAVE GODZILLA FRAUD DARK POWER",
+    "TMKX MEH POWER VOID SPELL HYPER GODLY BEAM GODLY BEAM POWER POWER POWER",
+    "TMKX MEH POWER WAVE WAVE OC3 GODZILLA V OC3 FUN FACT DARK POWER",
+    "TMKX MEH PARALLEL SPELL GODLY BEAM FRAUD DIMENSION WAVE HYPER SPELL SPELL",
+    "TMKX MEH PARALLEL POWER WAVE VOID WORM VOID DARK POWER SPELL HYPER",
+    "TMKX MEH POWER NOVA VOID WORM OC3 GODZILLA GODZILLA VOID WORM GODLY BEAM",
+    "TMKX MEH DIMENSION POWER SPELL DIMENSION WAVE WAVE WAVE HYPER POWER",
+    "TMKX MEH FUN FACT VOID GODZILLA FUN FACT DIMENSION VOID WORM GODLY BEAM PARALLEL NOVA"
+}
+
+local tmkxWords = {
+    "TMKX", "МЕН", "MEH", "VOID", "SPELL", "FUN", "FACT",
+    "FRAUD", "GODZILLA", "HYPER", "GODLY", "BEAM", "NOVA",
+    "POWER", "WAVE", "DARK", "OC3", "PARALLEL", "DIMENSION",
+    "WORM", "V"
+}
+
+local fallbackTargets = { "R4GE", "VOID", "ALPHA", "OMEGA" }
+local randomEmojis = { "⚡", "🔥", "👑", "💥", "🌪️" }
+
+-- ==================== UI STATE ====================
+local selectedStyle = "///===///"
+local emojiCycleEnabled = false
+local cycleEnabled = false
+local isRunning = false
+local targetWordIndex = 1
+
+-- ==================== GUI ROOT ====================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SGSystemCoreUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = PlayerGui
+
+-- Compact Left Sidebar Panel
+local SidePanel = Instance.new("Frame")
+SidePanel.Name = "SidePanel"
+SidePanel.Parent = ScreenGui
+SidePanel.BackgroundColor3 = Color3.fromRGB(11, 8, 20)
+SidePanel.BackgroundTransparency = 0.05
+SidePanel.BorderSizePixel = 0
+SidePanel.Position = UDim2.new(0.11, 0, 0.16, 0)
+SidePanel.Size = UDim2.new(0, 142, 0, 322)
+SidePanel.Active = true
+SidePanel.Draggable = true
+
+Instance.new("UICorner", SidePanel).CornerRadius = UDim.new(0, 18)
+local SideStroke = Instance.new("UIStroke")
+SideStroke.Color = Color3.fromRGB(130, 45, 255)
+SideStroke.Thickness = 2
+SideStroke.Parent = SidePanel
+
+-- Compact Right Main Window
+local MainPanel = Instance.new("Frame")
+MainPanel.Name = "MainPanel"
+MainPanel.Parent = ScreenGui
+MainPanel.BackgroundColor3 = Color3.fromRGB(11, 8, 20)
+MainPanel.BackgroundTransparency = 0.05
+MainPanel.BorderSizePixel = 0
+MainPanel.Position = UDim2.new(0.24, 0, 0.16, 0)
+MainPanel.Size = UDim2.new(0, 456, 0, 322)
+MainPanel.Active = true
+MainPanel.Draggable = true
+
+Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 18)
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(130, 45, 255)
+MainStroke.Thickness = 2
+MainStroke.Parent = MainPanel
+
+-- Minimize Button
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Parent = ScreenGui
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(26, 17, 42)
+MinimizeButton.BorderSizePixel = 0
+MinimizeButton.Position = UDim2.new(0, 12, 0, 55)
+MinimizeButton.Size = UDim2.new(0, 90, 0, 32)
+MinimizeButton.Font = Enum.Font.GothamSemibold
+MinimizeButton.Text = "👑 SG"
+MinimizeButton.TextColor3 = Color3.fromRGB(235, 225, 255)
+MinimizeButton.TextSize = 13
+MinimizeButton.AutoButtonColor = false
+
+Instance.new("UICorner", MinimizeButton).CornerRadius = UDim.new(0, 10)
+local MiniStroke = Instance.new("UIStroke")
+MiniStroke.Color = Color3.fromRGB(130, 45, 255)
+MiniStroke.Thickness = 1.4
+MiniStroke.Parent = MinimizeButton
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    local nextState = not MainPanel.Visible
+    MainPanel.Visible = nextState
+    SidePanel.Visible = nextState
+end)
+
+-- Header Title
+local HeaderTitle = Instance.new("TextLabel")
+HeaderTitle.Parent = MainPanel
+HeaderTitle.BackgroundTransparency = 1
+HeaderTitle.Position = UDim2.new(0, 16, 0, 10)
+HeaderTitle.Size = UDim2.new(1, -32, 0, 28)
+HeaderTitle.Font = Enum.Font.GothamBlack
+HeaderTitle.Text = "⚡ SG (namaste JACK papa🔥) // SYSTEM CORE"
+HeaderTitle.TextColor3 = Color3.fromRGB(245, 245, 255)
+HeaderTitle.TextSize = 15
+HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+-- ==================== SIDEBAR CONTROLS ====================
+local function makeSideBox(yPos, defaultText, placeholderText, textColor)
+    local box = Instance.new("TextBox")
+    box.Parent = SidePanel
+    box.BackgroundColor3 = Color3.fromRGB(26, 17, 42)
+    box.BorderSizePixel = 0
+    box.Position = UDim2.new(0.08, 0, 0, yPos)
+    box.Size = UDim2.new(0.84, 0, 0, 34)
+    box.Font = Enum.Font.GothamBold
+    box.Text = defaultText
+    box.PlaceholderText = placeholderText
+    box.TextColor3 = textColor
+    box.TextSize = 12
+    box.ClearTextOnFocus = false
+
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 9)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(85, 35, 160)
+    stroke.Thickness = 1
+    stroke.Parent = box
+
+    return box
+end
+
+makeSideBox(14, "", "TextBox", Color3.fromRGB(235, 235, 245))
+
+local function makeStyleBtn(yPos, label, textSize)
+    local btn = Instance.new("TextButton")
+    btn.Parent = SidePanel
+    btn.BackgroundColor3 = Color3.fromRGB(26, 17, 42)
+    btn.BorderSizePixel = 0
+    btn.Position = UDim2.new(0.08, 0, 0, yPos)
+    btn.Size = UDim2.new(0.84, 0, 0, 34)
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = label
+    btn.TextColor3 = Color3.fromRGB(215, 75, 255)
+    btn.TextSize = textSize
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
+    return btn
+end
+
+local StyleBtn1 = makeStyleBtn(56, "///===///", 12)
+local StyleBtn2 = makeStyleBtn(98, "@", 13)
+local StyleBtn3 = makeStyleBtn(140, "+++---+++", 11)
+
+StyleBtn1.MouseButton1Click:Connect(function()
+    selectedStyle = "///===///"
+end)
+StyleBtn2.MouseButton1Click:Connect(function()
+    selectedStyle = "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+end)
+StyleBtn3.MouseButton1Click:Connect(function()
+    selectedStyle = "+++---+++"
+end)
+
+-- EMOJI CYCLE Toggle Button
+local EmojiCycleBtn = Instance.new("TextButton")
+EmojiCycleBtn.Parent = SidePanel
+EmojiCycleBtn.BackgroundColor3 = Color3.fromRGB(36, 14, 24)
+EmojiCycleBtn.BorderSizePixel = 0
+EmojiCycleBtn.Position = UDim2.new(0.08, 0, 0, 206)
+EmojiCycleBtn.Size = UDim2.new(0.84, 0, 0, 44)
+EmojiCycleBtn.Font = Enum.Font.GothamBold
+EmojiCycleBtn.Text = "EMOJI CYCLE: OFF"
+EmojiCycleBtn.TextColor3 = Color3.fromRGB(220, 210, 225)
+EmojiCycleBtn.TextSize = 10
+EmojiCycleBtn.AutoButtonColor = false
+Instance.new("UICorner", EmojiCycleBtn).CornerRadius = UDim.new(0, 9)
+
+EmojiCycleBtn.MouseButton1Click:Connect(function()
+    emojiCycleEnabled = not emojiCycleEnabled
+    EmojiCycleBtn.Text = emojiCycleEnabled and "EMOJI CYCLE: ON" or "EMOJI CYCLE: OFF"
+    EmojiCycleBtn.BackgroundColor3 = emojiCycleEnabled and Color3.fromRGB(58, 22, 82) or Color3.fromRGB(36, 14, 24)
+end)
+
+-- CYCLE Toggle Button
+local CycleBtn = Instance.new("TextButton")
+CycleBtn.Parent = SidePanel
+CycleBtn.BackgroundColor3 = Color3.fromRGB(28, 12, 22)
+CycleBtn.BorderSizePixel = 0
+CycleBtn.Position = UDim2.new(0.08, 0, 0, 260)
+CycleBtn.Size = UDim2.new(0.84, 0, 0, 44)
+CycleBtn.Font = Enum.Font.GothamBold
+CycleBtn.Text = "CYCLE: OFF"
+CycleBtn.TextColor3 = Color3.fromRGB(220, 210, 225)
+CycleBtn.TextSize = 11
+CycleBtn.AutoButtonColor = false
+Instance.new("UICorner", CycleBtn).CornerRadius = UDim.new(0, 9)
+
+CycleBtn.MouseButton1Click:Connect(function()
+    cycleEnabled = not cycleEnabled
+    CycleBtn.Text = cycleEnabled and "CYCLE: ON" or "CYCLE: OFF"
+    CycleBtn.BackgroundColor3 = cycleEnabled and Color3.fromRGB(58, 22, 82) or Color3.fromRGB(28, 12, 22)
+end)
+
+-- ==================== MAIN 4 TARGET INPUT BOXES ====================
+local targetBoxes = {}
+local positions = {
+    UDim2.new(0, 16, 0, 48),
+    UDim2.new(0, 168, 0, 48),
+    UDim2.new(0, 16, 0, 124),
+    UDim2.new(0, 168, 0, 124)
+}
+
+for i = 1, 4 do
+    local box = Instance.new("TextBox")
+    box.Parent = MainPanel
+    box.BackgroundColor3 = Color3.fromRGB(28, 20, 46)
+    box.BorderSizePixel = 0
+    box.Position = positions[i]
+    box.Size = UDim2.new(0, 142, 0, 64)
+    box.Font = Enum.Font.GothamBold
+    box.Text = ""
+    box.PlaceholderText = "Target " .. i
+    box.TextColor3 = Color3.fromRGB(235, 235, 250)
+    box.PlaceholderColor3 = Color3.fromRGB(165, 160, 185)
+    box.TextSize = 12
+    box.TextWrapped = true
+    box.ClearTextOnFocus = false
+
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 10)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(70, 38, 125)
+    stroke.Thickness = 1.2
+    stroke.Parent = box
+
+    table.insert(targetBoxes, box)
+end
+
+-- ==================== RUNTIME DELAY CARD ====================
+local DelayCard = Instance.new("Frame")
+DelayCard.Parent = MainPanel
+DelayCard.BackgroundColor3 = Color3.fromRGB(18, 13, 30)
+DelayCard.BorderSizePixel = 0
+DelayCard.Position = UDim2.new(0, 320, 0, 48)
+DelayCard.Size = UDim2.new(0, 120, 0, 140)
+
+Instance.new("UICorner", DelayCard).CornerRadius = UDim.new(0, 12)
+local DelayStroke = Instance.new("UIStroke")
+DelayStroke.Color = Color3.fromRGB(68, 36, 122)
+DelayStroke.Thickness = 1.2
+DelayStroke.Parent = DelayCard
+
+local DelayLabel = Instance.new("TextLabel")
+DelayLabel.Parent = DelayCard
+DelayLabel.BackgroundTransparency = 1
+DelayLabel.Position = UDim2.new(0, 4, 0, 16)
+DelayLabel.Size = UDim2.new(1, -8, 0, 20)
+DelayLabel.Font = Enum.Font.GothamBold
+DelayLabel.Text = "RUNTIME DELAY"
+DelayLabel.TextColor3 = Color3.fromRGB(190, 180, 215)
+DelayLabel.TextSize = 10
+
+local DelayInput = Instance.new("TextBox")
+DelayInput.Parent = DelayCard
+DelayInput.BackgroundColor3 = Color3.fromRGB(25, 17, 40)
+DelayInput.BorderSizePixel = 0
+DelayInput.Position = UDim2.new(0.12, 0, 0, 52)
+DelayInput.Size = UDim2.new(0.76, 0, 0, 38)
+DelayInput.Font = Enum.Font.GothamBlack
+DelayInput.Text = "0.8"
+DelayInput.PlaceholderText = "0.8"
+DelayInput.TextColor3 = Color3.fromRGB(220, 75, 255)
+DelayInput.TextSize = 16
+DelayInput.ClearTextOnFocus = false
+
+Instance.new("UICorner", DelayInput).CornerRadius = UDim.new(0, 8)
+
+-- ==================== START / STOP BUTTON ====================
+local StartBtn = Instance.new("TextButton")
+StartBtn.Parent = MainPanel
+StartBtn.BackgroundColor3 = Color3.fromRGB(22, 16, 36)
+StartBtn.BorderSizePixel = 0
+StartBtn.Position = UDim2.new(0, 16, 0, 204)
+StartBtn.Size = UDim2.new(0, 424, 0, 98)
+StartBtn.Font = Enum.Font.GothamBlack
+StartBtn.Text = "START SG SPAMMER"
+StartBtn.TextColor3 = Color3.fromRGB(225, 65, 255)
+StartBtn.TextSize = 14
+StartBtn.AutoButtonColor = false
+
+Instance.new("UICorner", StartBtn).CornerRadius = UDim.new(0, 12)
+local StartStroke = Instance.new("UIStroke")
+StartStroke.Color = Color3.fromRGB(68, 36, 122)
+StartStroke.Thickness = 1.2
+StartStroke.Parent = StartBtn
+
+-- ==================== AUTO TMKX GENERATOR & TARGET POOL ====================
+local function shuffleList(list)
+    local copy = table.clone(list)
+    for i = #copy, 2, -1 do
+        local j = math.random(1, i)
+        copy[i], copy[j] = copy[j], copy[i]
+    end
+    return copy
+end
+
+local function buildAutoMessagePool()
+    local pool = table.clone(baseList)
+    for _ = 1, 6 do
+        local shuffledWords = shuffleList(tmkxWords)
+        local line = "TMKX " .. table.concat(shuffledWords, " ", 1, math.min(9, #shuffledWords))
+        table.insert(pool, line)
+    end
+    return shuffleList(pool)
+end
+
+local function getActiveTargets()
+    local customTargets = {}
+    for _, box in ipairs(targetBoxes) do
+        local trimmed = box.Text:gsub("^%s+", ""):gsub("%s+$", "")
+        if trimmed ~= "" then
+            table.insert(customTargets, trimmed)
+        end
+    end
+    if #customTargets > 0 then
+        return customTargets
+    end
+    return fallbackTargets
+end
+
+local function pickTargetName()
+    local pool = getActiveTargets()
+    if cycleEnabled then
+        local chosen = pool[((targetWordIndex - 1) % #pool) + 1]
+        targetWordIndex += 1
+        return chosen
+    end
+    return pool[math.random(1, #pool)]
+end
+
+local function formatTargetBlock(activeTarget)
+    if emojiCycleEnabled then
+        local chosenEmoji = randomEmojis[math.random(1, #randomEmojis)]
+        return "[" .. activeTarget .. " (" .. chosenEmoji .. " )"
+    end
+    return "[" .. activeTarget .. "]"
+end
+
+StartBtn.MouseButton1Click:Connect(function()
+    if isRunning then
+        isRunning = false
+        StartBtn.Text = "START SG SPAMMER"
+        StartBtn.TextColor3 = Color3.fromRGB(225, 65, 255)
+    else
+        isRunning = true
+        StartBtn.Text = "STOP SG SPAMMER"
+        StartBtn.TextColor3 = Color3.fromRGB(255, 85, 110)
+
+        task.spawn(function()
+            local shuffledQueue = buildAutoMessagePool()
+            local queuePos = 1
+
+            while isRunning do
+                if queuePos > #shuffledQueue then
+                    shuffledQueue = buildAutoMessagePool()
+                    queuePos = 1
+                end
+
+                local phrase = shuffledQueue[queuePos]
+                queuePos += 1
+
+                local activeTarget = pickTargetName()
+                local fullPrefix = BASE_PREFIX .. selectedStyle
+                local targetPart = formatTargetBlock(activeTarget)
+                local finalMsg = fullPrefix .. targetPart .. phrase
+
+                sendChat(finalMsg)
+
+                local waitTime = tonumber(DelayInput.Text) or 0.8
+                task.wait(math.max(waitTime, 0.8))
+            end
+        end)
+    end
+end)
+
+print("✅ SG SYSTEM CORE loaded")
